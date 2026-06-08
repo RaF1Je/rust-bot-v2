@@ -18,15 +18,28 @@ async def search_player_by_steamid(steam_id: str):
     """
     Find player bm_id by searching their SteamID64
     """
-    url = f"https://api.battlemetrics.com/players?filter[search]={steam_id}&filter[game]=rust"
+    url = "https://api.battlemetrics.com/players/match"
+    payload = {
+        "data": [
+            {
+                "type": "identifier",
+                "attributes": {
+                    "type": "steamID",
+                    "identifier": steam_id
+                }
+            }
+        ]
+    }
     async with aiohttp.ClientSession(headers=headers) as session:
-        async with session.get(url) as resp:
+        async with session.post(url, json=payload) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 if data.get("data"):
                     # Return the first match's bm_id and name
                     player = data["data"][0]
-                    return player["attributes"]["id"], player["attributes"]["name"]
+                    return player.get("id"), player.get("attributes", {}).get("name", "Unknown")
+            elif resp.status == 401:
+                logger.error("BM_API_KEY is missing or invalid. Authentication required for /players/match.")
             else:
                 logger.error(f"Failed to search player {steam_id}: {resp.status} {await resp.text()}")
     return None, None
