@@ -103,27 +103,25 @@ async def remove_server_finish(update: Update, context: ContextTypes.DEFAULT_TYP
 
 # --- Player Management ---
 async def add_player_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Введите SteamID64 игрока (17 цифр):")
+    await update.message.reply_text("Введите BattleMetrics ID игрока (цифры из ссылки на его профиль):")
     return ADD_PLAYER_STEAM_ID
 
 async def add_player_finish(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    steam_id = update.message.text.strip()
-    if not steam_id.isdigit() or len(steam_id) != 17:
-        await update.message.reply_text("Неверный формат SteamID64. Введите 17 цифр или /cancel.")
+    bm_id = update.message.text.strip()
+    if not bm_id.isdigit():
+        await update.message.reply_text("Неверный формат. Введите только цифры (BattleMetrics ID) или /cancel.")
         return ADD_PLAYER_STEAM_ID
         
     msg = await update.message.reply_text("Ищу игрока в BattleMetrics...")
-    bm_id, alias, err_msg = await bm.search_player_by_steamid(steam_id)
+    success, alias, is_online, srv_id, srv_name = await bm.get_player_info(bm_id)
     
-    if not bm_id:
-        if err_msg:
-            await msg.edit_text(f"Не удалось найти игрока. Причина: {err_msg}")
-        else:
-            await msg.edit_text("Не удалось найти игрока. Возможно, он никогда не играл на серверах Rust, отслеживаемых BM.")
+    if not success:
+        await msg.edit_text(f"Не удалось найти игрока. Причина: {alias}")
         return ConversationHandler.END
         
-    await db.add_player(update.effective_chat.id, steam_id, bm_id, alias)
-    await msg.edit_text(f"Игрок '{alias}' (SteamID: {steam_id}) добавлен в список отслеживания!")
+    # We store bm_id in both steam_id and bm_id columns so we don't need to rebuild the database
+    await db.add_player(update.effective_chat.id, bm_id, bm_id, alias)
+    await msg.edit_text(f"Игрок '{alias}' (BM ID: {bm_id}) добавлен в список отслеживания!")
     return ConversationHandler.END
 
 async def remove_player_start(update: Update, context: ContextTypes.DEFAULT_TYPE):

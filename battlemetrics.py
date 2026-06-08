@@ -53,6 +53,35 @@ async def search_player_by_steamid(steam_id: str):
         return None, None, f"Внутренняя ошибка бота: {e}"
     return None, None, "Неизвестная ошибка"
 
+async def get_player_info(bm_id: str):
+    """
+    Get player alias and status directly using their BM ID
+    """
+    url = f"https://api.battlemetrics.com/players/{bm_id}?include=server"
+    try:
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    alias = data["data"]["attributes"]["name"]
+                    
+                    is_online = False
+                    server_id = None
+                    server_name = None
+                    
+                    if "included" in data:
+                        for item in data["included"]:
+                            if item["type"] == "server":
+                                is_online = True
+                                server_id = item["attributes"]["id"]
+                                server_name = item["attributes"]["name"]
+                                break
+                    return True, alias, is_online, server_id, server_name
+                else:
+                    return False, f"Ошибка {resp.status}: {await resp.text()}", False, None, None
+    except Exception as e:
+        return False, str(e), False, None, None
+
 async def get_player_status(bm_id: str):
     """
     Get player status including current server
