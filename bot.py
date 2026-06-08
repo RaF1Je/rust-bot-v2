@@ -289,6 +289,11 @@ async def post_init(application):
     # Start polling loop
     asyncio.create_task(check_updates_loop(application))
 
+    # Scheduler for daily summary
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(send_daily_summary, 'cron', hour=20, minute=0, timezone=timezone.utc, args=[application])
+    scheduler.start()
+
 def main():
     if not BOT_TOKEN:
         logger.error("BOT_TOKEN is not set!")
@@ -340,11 +345,6 @@ def main():
         fallbacks=[CommandHandler('cancel', cancel)]
     )
     app.add_handler(conv_remove_player)
-
-    # Scheduler for daily summary
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(send_daily_summary, 'cron', hour=20, minute=0, timezone=timezone.utc, args=[app])
-    scheduler.start()
 
     logger.info("Bot started polling...")
     app.run_polling()
