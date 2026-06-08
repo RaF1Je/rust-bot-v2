@@ -113,10 +113,13 @@ async def add_player_finish(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ADD_PLAYER_STEAM_ID
         
     msg = await update.message.reply_text("Ищу игрока в BattleMetrics...")
-    bm_id, alias = await bm.search_player_by_steamid(steam_id)
+    bm_id, alias, err_msg = await bm.search_player_by_steamid(steam_id)
     
     if not bm_id:
-        await msg.edit_text("Не удалось найти игрока. Возможно, он никогда не играл на серверах Rust, отслеживаемых BM.")
+        if err_msg:
+            await msg.edit_text(f"Не удалось найти игрока. Причина: {err_msg}")
+        else:
+            await msg.edit_text("Не удалось найти игрока. Возможно, он никогда не играл на серверах Rust, отслеживаемых BM.")
         return ConversationHandler.END
         
     await db.add_player(update.effective_chat.id, steam_id, bm_id, alias)

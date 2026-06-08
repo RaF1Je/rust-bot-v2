@@ -37,12 +37,20 @@ async def search_player_by_steamid(steam_id: str):
                 if data.get("data"):
                     # Return the first match's bm_id and name
                     player = data["data"][0]
-                    return player.get("id"), player.get("attributes", {}).get("name", "Unknown")
+                    return player.get("id"), player.get("attributes", {}).get("name", "Unknown"), None
+                else:
+                    return None, None, "Игрок не найден в базе BattleMetrics."
             elif resp.status == 401:
                 logger.error("BM_API_KEY is missing or invalid. Authentication required for /players/match.")
+                return None, None, "Ошибка авторизации: неверный или отсутствующий BM_API_KEY."
             else:
-                logger.error(f"Failed to search player {steam_id}: {resp.status} {await resp.text()}")
-    return None, None
+                err_text = await resp.text()
+                logger.error(f"Failed to search player {steam_id}: {resp.status} {err_text}")
+                return None, None, f"Ошибка API BattleMetrics: {resp.status}"
+    except Exception as e:
+        logger.error(f"Exception during search_player_by_steamid: {e}")
+        return None, None, f"Внутренняя ошибка бота: {e}"
+    return None, None, "Неизвестная ошибка"
 
 async def get_player_status(bm_id: str):
     """
